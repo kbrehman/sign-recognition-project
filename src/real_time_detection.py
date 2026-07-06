@@ -2,6 +2,8 @@ import cv2
 import numpy as np
 import tensorflow as tf
 from collections import deque, Counter
+import time
+import pyttsx3
 
 
 MODEL_PATH = "exported_models/my_ssd_mobilenet/saved_model"
@@ -14,15 +16,11 @@ LABELS = {
     5: "iloveyou"
 }
 
-CONFIDENCE_THRESHOLD = 0.60
+CONFIDENCE_THRESHOLD = 0.65
 SMOOTHING_FRAMES = 8
 
 
 def smooth_box(previous_box, current_box, alpha=0.7):
-    """
-    Smooth bounding box movement.
-    alpha closer to 1 means more stable but slower movement.
-    """
     if previous_box is None:
         return current_box
 
@@ -34,10 +32,81 @@ def smooth_box(previous_box, current_box, alpha=0.7):
     ]
 
 
+def draw_panel(frame, stable_label, stable_score, sentence, fps):
+    height, width, _ = frame.shape
+
+    cv2.rectangle(frame, (0, 0), (width, 115), (0, 0, 0), -1)
+
+    cv2.putText(
+        frame,
+        f"Detected: {stable_label}",
+        (20, 35),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.8,
+        (0, 255, 255),
+        2
+    )
+
+    cv2.putText(
+        frame,
+        f"Confidence: {stable_score * 100:.1f}%",
+        (20, 70),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.7,
+        (0, 255, 0),
+        2
+    )
+
+    cv2.putText(
+        frame,
+        f"FPS: {fps:.1f}",
+        (width - 140, 35),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.7,
+        (255, 255, 255),
+        2
+    )
+
+    sentence_text = " ".join(sentence)
+    if len(sentence_text) > 60:
+        sentence_text = sentence_text[-60:]
+
+    cv2.putText(
+        frame,
+        f"Sentence: {sentence_text}",
+        (20, 105),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.65,
+        (255, 255, 255),
+        2
+    )
+
+
+def draw_controls(frame):
+    height, width, _ = frame.shape
+
+    controls = "A: Add word | S: Speak | C: Clear | B: Backspace | Q: Quit"
+
+    cv2.rectangle(frame, (0, height - 35), (width, height), (0, 0, 0), -1)
+
+    cv2.putText(
+        frame,
+        controls,
+        (20, height - 10),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.55,
+        (255, 255, 255),
+        1
+    )
+
+
 def main():
     print("Loading model...")
     detect_fn = tf.saved_model.load(MODEL_PATH)
     print("Model loaded successfully.")
+
+    engine = pyttsx3.init()
+    engine.setProperty("rate", 150)
 
     cap = cv2.VideoCapture(0)
 
@@ -48,9 +117,17 @@ def main():
     label_history = deque(maxlen=SMOOTHING_FRAMES)
     score_history = deque(maxlen=SMOOTHING_FRAMES)
 
+    sentence = []
+
     last_box = None
     stable_label = "Detecting..."
-    stable_score = 0
+    stable_score = 0.0
+
+    last_added_label = None
+    last_added_time = 0
+
+    prev_time = time.time()
+    fps = 0.0
 
     while True:
         ret, frame = cap.read()
@@ -58,6 +135,10 @@ def main():
         if not ret:
             print("Error: Failed to read frame.")
             break
+
+        current_time = time.time()
+        fps = 1 / (current_time - prev_time) if current_time != prev_time else 0
+        prev_time = current_time
 
         input_tensor = tf.convert_to_tensor(frame)
         input_tensor = input_tensor[tf.newaxis, ...]
@@ -80,7 +161,6 @@ def main():
         best_class = None
         best_box = None
 
-        # Pick only the best detection from this frame
         for i in range(num_detections):
             score = detection_scores[i]
 
@@ -104,25 +184,21 @@ def main():
             label_history.append(label)
             score_history.append(best_score)
 
-            # Most common label in recent frames
             most_common_label, count = Counter(label_history).most_common(1)[0]
 
-            # Only accept label if it appears repeatedly
             if count >= 4:
                 stable_label = most_common_label
                 stable_score = sum(score_history) / len(score_history)
                 last_box = smooth_box(last_box, current_box)
 
         else:
-            # Do not instantly remove box; wait a little
             label_history.append("none")
 
             if label_history.count("none") >= 6:
                 stable_label = "Detecting..."
-                stable_score = 0
+                stable_score = 0.0
                 last_box = None
 
-        # Draw stable box
         if last_box is not None and stable_label != "Detecting...":
             left, top, right, bottom = last_box
 
@@ -134,32 +210,51 @@ def main():
                 2
             )
 
-            text = f"{stable_label}: {stable_score * 100:.1f}%"
-
             cv2.putText(
                 frame,
-                text,
-                (left, max(top - 10, 30)),
+                f"{stable_label}: {stable_score * 100:.1f}%",
+                (left, max(top - 10, 130)),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                0.8,
+                0.75,
                 (0, 255, 0),
                 2
             )
-        else:
-            cv2.putText(
-                frame,
-                "Detecting...",
-                (20, 40),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.8,
-                (0, 255, 255),
-                2
-            )
 
-        cv2.imshow("Real-Time Sign Detection", frame)
+        draw_panel(frame, stable_label, stable_score, sentence, fps)
+        draw_controls(frame)
 
-        if cv2.waitKey(1) & 0xFF == ord("q"):
+        cv2.imshow("AI-Powered Real-Time Sign Language Recognition", frame)
+
+        key = cv2.waitKey(1) & 0xFF
+
+        if key == ord("q"):
             break
+
+        elif key == ord("a"):
+            if stable_label != "Detecting...":
+                # Avoid accidental duplicate additions too quickly
+                now = time.time()
+                if stable_label != last_added_label or now - last_added_time > 1.5:
+                    sentence.append(stable_label)
+                    last_added_label = stable_label
+                    last_added_time = now
+                    print(f"Added word: {stable_label}")
+
+        elif key == ord("c"):
+            sentence.clear()
+            print("Sentence cleared.")
+
+        elif key == ord("b"):
+            if sentence:
+                removed = sentence.pop()
+                print(f"Removed word: {removed}")
+
+        elif key == ord("s"):
+            if sentence:
+                text = " ".join(sentence)
+                print(f"Speaking: {text}")
+                engine.say(text)
+                engine.runAndWait()
 
     cap.release()
     cv2.destroyAllWindows()
