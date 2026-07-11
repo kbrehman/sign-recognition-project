@@ -9,3 +9,4 @@ workspace/models/
 
 *.record
 *.tar.gz
+workspace/images/
