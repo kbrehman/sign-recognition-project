@@ -3,7 +3,13 @@ import os
 import time
 
 # Signs/classes
-SIGNS = ["hello", "thanks", "yes", "no", "iloveyou"]
+SIGNS = [
+    "please",
+    "sorry",
+    "help",
+    "good",
+    "clockit"
+]
 
 # Number of images to collect for each sign
 IMAGES_PER_SIGN = 100

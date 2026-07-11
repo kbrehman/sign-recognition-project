@@ -11,7 +11,13 @@ LABEL_MAP = {
     "thanks": 2,
     "yes": 3,
     "no": 4,
-    "iloveyou": 5
+    "iloveyou": 5,
+    "please": 6,
+    "sorry": 7,
+    "help": 8,
+    "good": 9,
+    "clockit": 10
+
 }
 
 

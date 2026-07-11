@@ -22,3 +22,28 @@ item {
   id: 5
   name: 'iloveyou'
 }
+
+item {
+  id: 6
+  name: 'please'
+}
+
+item {
+  id: 7
+  name: 'sorry'
+}
+
+item {
+  id: 8
+  name: 'help'
+}
+
+item {
+  id: 9
+  name: 'good'
+}
+
+item {
+  id: 10
+  name: 'clockit'
+}
