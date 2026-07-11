@@ -10,3 +10,6 @@ workspace/models/
 *.record
 *.tar.gz
 workspace/images/
+
+workspace/annotations/train/
+workspace/annotations/test/
