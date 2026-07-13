@@ -666,13 +666,15 @@
 
 ##### 
 
-##### A demo video of the real-time sign language recognition system is included in:
+##### A demo video of the real-time sign language recognition system is included in this repository.
 
 ##### 
 
-##### results/demo/sign\_recognition\_demo.mp4
+##### \[Watch Demo Video](results/demo/sign\_recognition\_demo.mp4)
 
-##### 
+
+
+
 
 ##### \## Author
 
