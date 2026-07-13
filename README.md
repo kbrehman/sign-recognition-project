@@ -670,9 +670,11 @@
 
 ##### 
 
-##### \[Watch Demo Video](results/demo/sign\_recognition\_demo.mp4)
+##### \[Watch Demo Video](./results/demo/sign\_recognition\_demo.mp4)
 
+##### 
 
+##### If the video does not preview directly on GitHub, click the link and then use the Download or View raw option.
 
 
 
