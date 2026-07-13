@@ -666,6 +666,10 @@
 
 ##### 
 
+https://github.com/user-attachments/assets/9c1cd675-7305-4225-8e8c-8f218e054b8d
+
+
+
 ##### A demo video of the real-time sign language recognition system is included in this repository.
 
 ##### 
